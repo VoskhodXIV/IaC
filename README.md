@@ -148,6 +148,12 @@ aws cloudformation delete-stack --stack-name <stack-name>
 
 ## :desktop_computer: Stack and VPC details
 
+- To list all the stacks in the current `AWS_PROFILE`, use the following command:
+
+```shell
+aws cloudformation list-stacks --output table
+```
+
 - To view the details of the stack created, run the following command:
 
 ```shell

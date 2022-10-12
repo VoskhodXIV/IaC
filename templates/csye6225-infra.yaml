@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description:
-  Basic template to setup our networking resources such as Virtual Private Cloud (VPC), Internet Gateway, Route Tables, and Routes.
+  Basic template to setup networking resources such as Virtual Private Cloud (VPC), Internet Gateway, Route Tables, and Routes in a stack.
   Uses AWS CloudFormation for infrastructure setup and tear down.
 
 # Parameters
@@ -14,38 +14,46 @@ Parameters:
     Type: String
     Default: 10.0.0.0/16
   CidrSubnet1:
-    Description: Public subnet IP range in the first AZ(Availability Zone)
+    Description: Subnet-01 IP range in the first AZ(Availability Zone)
     Type: String
     Default: 10.0.10.0/24
   CidrSubnet2:
-    Description: Public subnet IP range in the second AZ(Availability Zone)
+    Description: Subnet-02 IP range in the second AZ(Availability Zone)
     Type: String
     Default: 10.0.11.0/24
   CidrSubnet3:
-    Description: Public subnet IP range in the third AZ(Availability Zone)
+    Description: Subnet-03 IP range in the third AZ(Availability Zone)
     Type: String
     Default: 10.0.20.0/24
+  VpcName:
+    Description: Virtual Private Cloud name
+    Type: String
+    Default: AWS::StackName
+  GatewayName:
+    Description: Internet Gateway name
+    Type: String
+    Default: Internet Gateway
 
-# Resources
+# Setup resources
 Resources:
   # Virtual Private Cloud
   VPC:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: !Ref VpcCidrBlock
-      EnableDnsSupport: 'true'
-      EnableDnsHostnames: 'true'
-      InstanceTenancy: 'default'
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
       Tags:
         - Key: Name
-          Value: !Ref AWS::StackName
+          Value: !Ref VpcName
   # Internet Gateway
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: !Ref Environment
+          Value: !Ref GatewayName
   # Internet Gateway Attachment
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -121,18 +129,23 @@ Resources:
       SubnetId: !Ref Subnet3
 # Outputs
 Outputs:
+    # Show the VPC ID
     VpcId:
-      Description: The VPC ID
+      Description: VPC ID
       Value: !Ref VPC
+    # Subnet 1
     Subnet1:
       Description: Public Subnet-01
       Value: !Ref Subnet1
+    # Subnet 2
     Subnet2:
       Description: Public Subnet-02
       Value: !Ref Subnet2
+    # Subnet 3
     Subnet3:
       Description: Public Subnet-03
       Value: !Ref Subnet3
+    # List of subnets
     Subnets:
       Description: The list of subnets
       Value: !Join [ ",", [ !Ref Subnet1, !Ref Subnet2, !Ref Subnet3 ]]

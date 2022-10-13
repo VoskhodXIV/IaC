@@ -168,6 +168,12 @@ aws cloudformation describe-stacks --stack-name <stack-name> --output table
 aws ec2 describe-vpcs --output table
 ```
 
+- To get the AZs(Availability Zones) of a region, use the following command:
+
+```shell
+aws ec2 describe-availability-zones [--region <region-name>] --output table
+```
+
 ## :ninja: Author
 
 [Siddharth Rawat](mailto:rawat.sid@northeastern.edu)

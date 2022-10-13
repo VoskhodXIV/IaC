@@ -1,8 +1,8 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description:
-  Basic template to setup networking resources such as Virtual Private Cloud (VPC), Internet Gateway, Route Tables, and Routes in a stack.
-  Uses AWS CloudFormation for infrastructure setup and tear down.
+  Template to setup networking resources such as Virtual Private Cloud(VPC), Internet Gateway, Route Tables, and Routes in a stack
 
+# https://stackoverflow.com/questions/54625629/subnet-problem-in-vpc-creation-via-cloudformation
 # Parameters
 Parameters:
   Environment:
@@ -25,14 +25,10 @@ Parameters:
     Description: Subnet-03 IP range in the third AZ(Availability Zone)
     Type: String
     Default: 10.0.20.0/24
-  VpcName:
-    Description: Virtual Private Cloud name
+  StackName:
+    Description: CloudFormation stack name
     Type: String
     Default: AWS::StackName
-  GatewayName:
-    Description: Internet Gateway name
-    Type: String
-    Default: Internet Gateway
 
 # Setup resources
 Resources:
@@ -46,14 +42,14 @@ Resources:
       InstanceTenancy: default
       Tags:
         - Key: Name
-          Value: !Ref VpcName
+          Value: !Sub ${StackName} - VPC
   # Internet Gateway
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: !Ref GatewayName
+          Value: !Sub ${StackName} - Internet Gateway
   # Internet Gateway Attachment
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -67,10 +63,10 @@ Resources:
       VpcId: !Ref VPC
       CidrBlock: !Ref CidrSubnet1
       AvailabilityZone: !Select [0, !GetAZs '']
-      MapPublicIpOnLaunch: 'true'
+      MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub ${Environment} Public Subnet (AZ1)
+          Value: !Sub ${StackName} - Public Subnet (AZ1)
   # Subnet 2
   Subnet2:
     Type: AWS::EC2::Subnet
@@ -78,10 +74,10 @@ Resources:
       VpcId: !Ref VPC
       CidrBlock: !Ref CidrSubnet2
       AvailabilityZone: !Select [1, !GetAZs '']
-      MapPublicIpOnLaunch: 'true'
+      MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub ${Environment} Public Subnet (AZ2)
+          Value: !Sub ${StackName} - Public Subnet (AZ2)
   # Subnet 3
   Subnet3:
     Type: AWS::EC2::Subnet
@@ -89,10 +85,10 @@ Resources:
       VpcId: !Ref VPC
       CidrBlock: !Ref CidrSubnet3
       AvailabilityZone: !Select [2, !GetAZs '']
-      MapPublicIpOnLaunch: 'true'
+      MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub ${Environment} Public Subnet (AZ3)
+          Value: !Sub ${StackName} - Public Subnet (AZ3)
   # Route Table
   RouteTable:
     Type: AWS::EC2::RouteTable
@@ -100,7 +96,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${Environment} Public Routes
+          Value: !Sub ${StackName} - Public Route Table
   # Public Route in Route Table
   DefaultPublicRoute:
     Type: AWS::EC2::Route

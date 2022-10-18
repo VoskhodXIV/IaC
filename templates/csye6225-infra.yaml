@@ -2,13 +2,15 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description:
   Template to setup networking resources such as Virtual Private Cloud(VPC), Internet Gateway, Route Tables, and Routes in a stack
 
-# https://stackoverflow.com/questions/54625629/subnet-problem-in-vpc-creation-via-cloudformation
 # Parameters
 Parameters:
   Environment:
-    Description: Infrastructure as Code - Development Environment
+    Description: Infrastructure as Code - Environment Name
     Type: String
-    Default: infra-cloudformation
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
   VpcCidrBlock:
     Description: CIDR Block for VPC
     Type: String
@@ -25,10 +27,15 @@ Parameters:
     Description: Subnet-03 IP range in the third AZ(Availability Zone)
     Type: String
     Default: 10.0.20.0/24
-  StackName:
-    Description: CloudFormation stack name
+  EC2InstanceType:
     Type: String
-    Default: AWS::StackName
+    Default: t2.micro
+    AllowedValues: [t2.micro]
+    Description: "EC2Instance AMI"
+  AMI:
+    Type: String
+    Default: "ami-036f8ef0c73d8ed95"
+    Description: "The custom AMI built using Packer"
 
 # Setup resources
 Resources:
@@ -42,14 +49,14 @@ Resources:
       InstanceTenancy: default
       Tags:
         - Key: Name
-          Value: !Sub ${StackName} - VPC
+          Value: !Ref AWS::StackName
   # Internet Gateway
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub ${StackName} - Internet Gateway
+          Value: !Sub Internet Gateway
   # Internet Gateway Attachment
   InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -66,7 +73,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub ${StackName} - Public Subnet (AZ1)
+          Value: !Sub Public Subnet (AZ1)
   # Subnet 2
   Subnet2:
     Type: AWS::EC2::Subnet
@@ -77,7 +84,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub ${StackName} - Public Subnet (AZ2)
+          Value: !Sub Public Subnet (AZ2)
   # Subnet 3
   Subnet3:
     Type: AWS::EC2::Subnet
@@ -88,7 +95,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
-          Value: !Sub ${StackName} - Public Subnet (AZ3)
+          Value: !Sub Public Subnet (AZ3)
   # Route Table
   RouteTable:
     Type: AWS::EC2::RouteTable
@@ -96,7 +103,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: !Sub ${StackName} - Public Route Table
+          Value: !Sub Public Route Table
   # Public Route in Route Table
   DefaultPublicRoute:
     Type: AWS::EC2::Route
@@ -111,18 +118,87 @@ Resources:
       Properties:
         RouteTableId: !Ref RouteTable
         SubnetId: !Ref Subnet1
+
   # Attach Subnet2 to Route Table
   PublicSubnet2RouteAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref RouteTable
       SubnetId: !Ref Subnet2
+
   # Attach Subnet3 to Route Table
   PublicSubnet3RouteAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref RouteTable
       SubnetId: !Ref Subnet3
+
+  # Custom security group on the custom VPC
+  EC2InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "ApplicationSecurityGroup"
+      GroupDescription: "Application Security Group"
+      VpcId: !Ref VPC
+      # Ingress rules
+      SecurityGroupIngress:
+        # SSH port
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp:  0.0.0.0/0
+        # HTTP port
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        # HTTPS port
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        # Application port
+        - IpProtocol: tcp
+          FromPort: 1337
+          ToPort: 1337
+          CidrIp: 0.0.0.0/0
+
+# Launch the custom EC2 AMI instance
+  EC2AppInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AMI
+      InstanceType: !Ref EC2InstanceType
+      KeyName: ec2-user
+      SubnetId: !Ref Subnet1
+      SecurityGroupIds:
+        - !Ref EC2InstanceSecurityGroup
+      DisableApiTermination: false # protected against accidental termination :NO
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeType: gp2
+            DeleteOnTermination: true
+            VolumeSize: 50
+            Encrypted: true
+      Tags:
+        -
+          Key: Name
+          Value: webapp
+      UserData:
+        Fn::Base64:
+            !Sub |
+            #!/bin/bash
+            echo "Starting the REST API Service"
+            sudo systemctl enable nodeserver.service
+            sudo systemctl start nodeserver.service
+            APISRVC=$?
+            if [ $APISRVC -eq 0 ]; then
+              echo "API service is running successfully!"
+            else
+              echo "Unable to start the API service"
+            fi
+
 # Outputs
 Outputs:
     # Show the VPC ID

@@ -174,6 +174,18 @@ aws ec2 describe-vpcs --output table
 aws ec2 describe-availability-zones [--region <region-name>] --output table
 ```
 
+## :arrow_double_up: Custom Amazon Machine Image (AMI)
+
+To create a stack with custom AMI, replace the AMI default value under the `AMI` parameter with the custom AMI id that is created using packer:
+
+```yaml
+parameters:
+  AMI:
+    Type: String
+    Default: "<your-ami-id>"
+    Description: "The custom AMI built using Packer"
+```
+
 ## :ninja: Author
 
 [Siddharth Rawat](mailto:rawat.sid@northeastern.edu)

@@ -105,7 +105,7 @@ export AWS_PROFILE=dev
 export AWS_PROFILE=
 ```
 
-## :cloud: [AWS CloudFormation](https://docs.aws.amazon.com/cli/latest/reference/cloudformation/index.html)
+## :cloud: [AWS CloudFormation Stack](https://docs.aws.amazon.com/cli/latest/reference/cloudformation/index.html)
 
 Configure the networking infrastructure setup using AWS Cloudformation:
 
@@ -120,33 +120,88 @@ Configure the networking infrastructure setup using AWS Cloudformation:
 - Create a public [route table](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Route_Tables.html). Attach all subnets created to the route table.
 - Create a public route in the public route table created above with the destination CIDR block `0.0.0.0/0` and internet gateway created above as the target.
 
-### :rocket: Create VPCs using CloudFormation
+## :desktop_computer: AWS AMI (Amazon Machine Images)
 
-- Validate the CloudFormation template using the following command:
+### [Default VPC](https://docs.aws.amazon.com/vpc/latest/userguide/default-vpc.html#create-default-vpc)
+
+To create a default VPC in case you deleted the default VPC in your AWS account, use the following command:
+
+```shell
+aws ec2 create-default-vpc
+```
+
+### Custom AMI
+
+To create a stack with custom AMI, replace the AMI default value under the `AMI` parameter with the custom AMI id that is created using [Packer](https://www.packer.io
+):
+
+```yaml
+parameters:
+  AMI:
+    Type: String
+    Default: "<your-ami-id>"
+    Description: "The custom AMI built using Packer"
+```
+
+### :hammer: Configuration
+
+To launch the EC2 AMI at CloudFormation stack creation, we need to have a few configurations in place.
+
+#### Custom security group
+
+We need to create a custom security group for our application with the following `ingress rules` to allow TCP traffic on our `VPC`:
+
+- `SSH` protocol on PORT `22`.
+- `HTTP` protocol on PORT `80`.
+- `HTTPS` protocol on PORT `443`.
+- PORT `1337` for our webapp to be hosted on. (This can vary according to developer needs)
+- Their IPs should be accessible from anywhere in the world.
+
+#### AWS EC2 AMI instance
+
+To launch the custom EC2 AMI using the CloudFormation stack, we need to configure the EC2 instance with the custom security group we created above, and then define the `EBS volumes` with the following properties:
+
+- Custom AMI ID (created using Packer)
+- Instance type : `t2.micro`
+- Protected against accidental termination: `no`
+- Root volume size: 50
+- Root volume type: `General Purpose SDD (GP2)`
+
+## :rocket: Using the stack
+
+### Validate template
+
+Validate the CloudFormation template using the following command:
 
 ```shell
 aws cloudformation validate-template --template-body file://<path-to-template-file>.yaml
 ```
 
-- To create the stack, run the following command:
+### Create and launch
+
+To create the stack, run the following command:
 
 ```shell
 aws cloudformation create-stack --stack-name <stack-name> --template-body file://<path-to-template-file>.yaml
 ```
 
-- To update the stack, run the following command:
+### Update
+
+To update the stack, run the following command:
 
 ```shell
 aws cloudformation update-stack --stack-name <stack-name> --template-body file://<path-to-template-file>.yml
 ```
 
-- To delete the stack, run the following command:
+### Delete
+
+To delete the stack, run the following command:
 
 ```shell
 aws cloudformation delete-stack --stack-name <stack-name>
 ```
 
-## :desktop_computer: Stack and VPC details
+### Stack and VPC details
 
 - To list all the stacks in the current `AWS_PROFILE`, use the following command:
 
@@ -172,18 +227,6 @@ aws ec2 describe-vpcs --output table
 
 ```shell
 aws ec2 describe-availability-zones [--region <region-name>] --output table
-```
-
-## :arrow_double_up: Custom Amazon Machine Image (AMI)
-
-To create a stack with custom AMI, replace the AMI default value under the `AMI` parameter with the custom AMI id that is created using packer:
-
-```yaml
-parameters:
-  AMI:
-    Type: String
-    Default: "<your-ami-id>"
-    Description: "The custom AMI built using Packer"
 ```
 
 ## :ninja: Author

@@ -34,7 +34,7 @@ Parameters:
     Description: "EC2Instance AMI"
   AMI:
     Type: String
-    Default: "ami-036f8ef0c73d8ed95"
+    Default: "ami-0268abf582db81870"
     Description: "The custom AMI built using Packer"
 
 # Setup resources
@@ -190,8 +190,10 @@ Resources:
             !Sub |
             #!/bin/bash
             echo "Starting the REST API Service"
-            sudo systemctl enable nodeserver.service
-            sudo systemctl start nodeserver.service
+            sudo systemctl start nodeserver
+            sudo systemctl status nodeserver
+            sudo systemctl enable nodeserver
+            sudo systemctl restart nodeserver
             APISRVC=$?
             if [ $APISRVC -eq 0 ]; then
               echo "API service is running successfully!"

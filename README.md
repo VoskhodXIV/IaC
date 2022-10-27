@@ -167,6 +167,62 @@ To launch the custom EC2 AMI using the CloudFormation stack, we need to configur
 - Root volume size: 50
 - Root volume type: `General Purpose SDD (GP2)`
 
+#### AWS S3 and RDS configuration
+
+To use the RDS and S3 on AWS we need to configure the following:
+
+- `AWS::S3::Bucket`
+  - Default encryption for bucket.
+  - Lifecycle policy to change storage type from `STANDARD` to `STANDARD_IA` after 30 days.
+- `AWS::RDS::DBParameterGroup`
+  - DB Engine config.
+- `AWS::RDS::DBSubnetGroup`
+- `AWS::EC2::SecurityGroup`
+  - Ingress rule for `5432` port for Postgres.
+  - `Application Security Group` is the source for traffic.
+- `AWS::IAM::Role`
+- `AWS::IAM::InstanceProfile`
+- `AWS::IAM::Policy`
+
+  ```json
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "s3:*"
+            ],
+            "Effect": "Allow",
+            "Resource": [
+                "arn:aws:s3:::YOUR_BUCKET_NAME",
+                "arn:aws:s3:::YOUR_BUCKET_NAME/*"
+            ]
+        }
+    ]
+  }
+  ```
+
+  > NOTE: Replace `*` with appropriate permissions for the S3 bucket to create security policies.
+- `AWS::RDS::DBInstance`
+  - Configure the following:
+    - Database Engine:  MySQL/PostgreSQL
+    - DB Instance Class:  db.t3.micro
+    - Multi-AZ deployment:  No
+    - DB instance identifier: csye6225
+    - Master username: csye6225
+    - Master password: pick a strong password
+    - Subnet group: Private subnet for RDS instances
+    - Public accessibility: No
+    - Database name: csye6225
+
+> NOTE: To run the application on a custom bucket, we need to update the `UserData` field in the `AWS::EC2::Instance`.
+
+- To hard delete a bucket, you can use the following command:
+
+```shell
+aws s3 rm s3://<bucket-name> --recursive
+```
+
 ## :rocket: Using the stack
 
 ### Validate template

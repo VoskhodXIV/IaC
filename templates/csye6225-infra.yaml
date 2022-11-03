@@ -22,7 +22,7 @@ Parameters:
     Description: 'EC2Instance AMI'
   AMI:
     Type: String
-    Default: 'ami-0704737cdb768ad78'
+    Default: 'ami-05e8a8b7a6fff961b'
     Description: 'The custom AMI built using Packer'
   DBInstanceIdentifierName:
     Type: String
@@ -43,6 +43,11 @@ Parameters:
     Type: String
     Default: 'poptart1234'
     Description: 'DB Password'
+
+  HostedZoneName:
+    Type: String
+    Default: 'sydrawat.me.'
+    Description: Hosted zone name
 
 # Setup resources
 Resources:
@@ -366,7 +371,16 @@ Resources:
         - !Ref DBSecurityGroup
       DBSubnetGroupName: !Ref DBSubnetGroup
       DBParameterGroupName: !Ref DBParameterGroup
-
+  # Route 53 A record  aliasing to the Load Balancer
+  DNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneName: !Join ['', [!Ref Environment, ., !Ref HostedZoneName]]
+      Name: !Join ['', [!Ref Environment, ., !Ref HostedZoneName]]
+      Type: A
+      TTL: '60'
+      ResourceRecords:
+        - !GetAtt EC2AppInstance.PublicIp
   # Launch the custom EC2 AMI instance
   EC2AppInstance:
     Type: AWS::EC2::Instance

@@ -223,6 +223,28 @@ To use the RDS and S3 on AWS we need to configure the following:
 aws s3 rm s3://<bucket-name> --recursive
 ```
 
+#### DNS configuration using AWS Route53
+
+To configure the Domain Name System (DNS), we need to do the following **from the AWS Console**:
+
+1. Register a domain with a domain registrar [(Namecheap)](https://www.namecheap.com/domains/registration.aspx). Namecheap offers free domain for a year with Github Student Developer pack.
+2. Configure AWS Route53 for DNS service:
+   1. Create a `HostedZone` for the **root** AWS account, where we create a public hosted zone for domain `yourdomainname.tld`.
+   2. Configure Namecheap with the custom `Name Servers` provided by AWS Route53 to use Route53 name servers.
+   3. Create a public hosted zone in the **dev** AWS account, with the subdomain `dev.yourdomainname.tld`.
+   4. Create a public hosted zone in the **prod** AWS account, with the subdomain `prod.yourdomainname.tld`.
+   5. Configure the name servers and subdomain in the root AWS account (for both dev and prod).
+3. AWS Route53 is updated from the CloudFormation template. We need to add an `A` record to the Route53 zone so that your domain points to your EC2 instance and your web application is accessible through `http://your-domain-name.tld/`.
+4. The application must be accessible using root context i.e. `http://your-domain-name.tld/` and not `http://your-domain-name.tld/app-0.1/`.
+
+#### Amazon Simple Email Service (SES)
+
+The following steps are done **manually** and only for the subdomain in the prod AWS account:
+
+1. [Verify Domain in Amazon SES.](http://docs.aws.amazon.com/ses/latest/DeveloperGuide/verify-domains.html)
+2. [Authenticate Email with DKIM in Amazon SES.](http://docs.aws.amazon.com/ses/latest/DeveloperGuide/dkim.html)
+3. [Move Out of the Amazon SES Sandbox by Requesting Production Access.](http://docs.aws.amazon.com/ses/latest/DeveloperGuide/request-production-access.html)
+
 ## :rocket: Using the stack
 
 ### Validate template

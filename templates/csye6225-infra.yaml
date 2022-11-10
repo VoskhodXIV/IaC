@@ -22,7 +22,7 @@ Parameters:
     Description: 'EC2Instance AMI'
   AMI:
     Type: String
-    Default: 'ami-05e8a8b7a6fff961b'
+    Default: 'ami-083e268b9a083e66f'
     Description: 'The custom AMI built using Packer'
   DBInstanceIdentifierName:
     Type: String
@@ -312,7 +312,7 @@ Resources:
           Value: Database Security Group
 
   # Create IAM Role for EC2 Instance with S3 Bucket Policy
-  S3BucketIAMRole:
+  IAMRole:
     Type: 'AWS::IAM::Role'
     Properties:
       RoleName: 'EC2-CSYE6225'
@@ -326,6 +326,8 @@ Resources:
             Action:
               - 'sts:AssumeRole'
       Path: '/'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/CloudwatchAgentServerPolicy' #Amazon Cloudwatch Agent Policy
   # Create Iam Instance Profile
   S3BucketIAMInstanceProfile:
     Type: AWS::IAM::InstanceProfile
@@ -333,7 +335,7 @@ Resources:
       InstanceProfileName: demo-ec2-instance-profile
       Path: /
       Roles:
-        - !Ref S3BucketIAMRole
+        - !Ref IAMRole
   RolePolicies:
     Type: 'AWS::IAM::Policy'
     Properties:
@@ -350,7 +352,7 @@ Resources:
               - !Sub arn:aws:s3:::${S3Bucket}
               - !Sub arn:aws:s3:::${S3Bucket}/*
       Roles:
-        - Ref: S3BucketIAMRole
+        - Ref: IAMRole
 
   RDSInstance:
     Type: AWS::RDS::DBInstance
@@ -412,6 +414,7 @@ Resources:
           rm .env
           pwd
           touch .env
+          echo ENVIRONMENT="${Environment}" >> .env
           echo PORT=1337 >> .env
           echo HOSTNAME="${RDSInstance.Endpoint.Address}" >> .env
           echo DATABASE="${DBName}" >> .env

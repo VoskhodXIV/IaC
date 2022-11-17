@@ -22,7 +22,7 @@ Parameters:
     Description: 'EC2Instance AMI'
   AMI:
     Type: String
-    Default: 'ami-083e268b9a083e66f'
+    Default: 'ami-0aa63a46b3bc3f565'
     Description: 'The custom AMI built using Packer'
   DBInstanceIdentifierName:
     Type: String
@@ -328,8 +328,10 @@ Resources:
       Path: '/'
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/CloudwatchAgentServerPolicy' #Amazon Cloudwatch Agent Policy
+        - 'arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess' # DynamoDB policy
+        - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess' # SNS policy
   # Create Iam Instance Profile
-  S3BucketIAMInstanceProfile:
+  EC2IAMInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       InstanceProfileName: demo-ec2-instance-profile
@@ -389,7 +391,7 @@ Resources:
     Properties:
       ImageId: !Ref AMI
       InstanceType: !Ref EC2InstanceType
-      IamInstanceProfile: !Ref S3BucketIAMInstanceProfile
+      IamInstanceProfile: !Ref EC2IAMInstanceProfile
       KeyName: ec2-user
       SubnetId: !Ref PublicSubnet1
       SecurityGroupIds:
@@ -422,11 +424,140 @@ Resources:
           echo DBUSER="${DBUser}" >> .env
           echo AWS_BUCKET_NAME="${S3Bucket}" >> .env
           echo AWS_REGION="${AWS::Region}" >> .env
+          echo DYNAMO_DB_TABLE_NAME=${DynamoDBTable} >> .env
+          echo SNS_TOPIC_ARN=${SNSservice} >> .env
           cat .env
 
           echo "Starting the REST API Service with new .env variables"
           sudo systemctl restart nodeserver.service
           sudo systemctl status nodeserver.service
+  # DynamoDB
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: csye-6225
+      AttributeDefinitions:
+        - AttributeName: 'Email'
+          AttributeType: 'S'
+        - AttributeName: 'Token'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'Email'
+          KeyType: 'HASH'
+        - AttributeName: 'Token'
+          KeyType: 'RANGE'
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      TimeToLiveSpecification:
+        AttributeName: TimeToLive
+        Enabled: true
+      Tags:
+        - Key: key
+          Value: value
+  SNSservice:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: verify_email
+      Subscription:
+        - Endpoint: !GetAtt LambdaFunction.Arn
+          Protocol: lambda
+      TopicName: verify_email
+  # SNS topic policy
+  SNStopicpolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2008-10-17'
+        Id: __default_policy_ID
+        Statement:
+          - Sid: __default_statement_ID
+            Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - SNS:Publish
+              - SNS:DeleteTopic
+              - SNS:ListSubscriptionsByTopic
+              - SNS:GetTopicAttributes
+              - SNS:Receive
+              - SNS:AddPermission
+              - SNS:Subscribe
+            Resource:
+              Ref: SNSservice
+            Condition:
+              StringEquals:
+                AWS:SourceOwner: !Ref AWS::AccountId
+          - Sid: __console_pub_0
+            Effect: Allow
+            Principal:
+              AWS: '*'
+            Action: SNS:Publish
+            Resource:
+              Ref: SNSservice
+          - Sid: __console_sub_0
+            Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - SNS:Subscribe
+              - SNS:Receive
+            Resource:
+              Ref: SNSservice
+      Topics:
+        - Ref: SNSservice
+  # Lambda Permissions
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: sns.amazonaws.com
+      SourceArn:
+        Ref: SNSservice
+
+  # Lambda Function
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: emailVerify
+      Role:
+        Fn::Join:
+          - ''
+          - - 'arn:aws:iam::'
+            - !Ref AWS::AccountId
+            - ':role/'
+            - !Ref LambdaRole
+      Runtime: nodejs16.x
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          console.log('In Lambda function');
+          exports.handler=function(event,context,callback){
+            console.log('Message from SNS');
+            var message = event.Records[0].Sns.Message;
+            callback(null,"Success");
+          };
+      Description: Function to store token in dynamodb and send email to SNS
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: 'LambdaFunctionRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSESFullAccess
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - 'arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess'
 
 # Outputs
 Outputs:

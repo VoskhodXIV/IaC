@@ -245,6 +245,34 @@ The following steps are done **manually** and only for the subdomain in the pr
 2. [Authenticate Email with DKIM in Amazon SES.](http://docs.aws.amazon.com/ses/latest/DeveloperGuide/dkim.html)
 3. [Move Out of the Amazon SES Sandbox by Requesting Production Access.](http://docs.aws.amazon.com/ses/latest/DeveloperGuide/request-production-access.html)
 
+Once you have production access, you can send out more than 50,000 mails per day. We need to create a custom `MAIL FROM` domain in the AWS account where we have Amazon SES production access. We need to publish the `MX` and `TXT` records to `Route53` so that our DNS has access to our mail servers, and in turn can send out emails.
+
+#### Amazon DynamoDB and Simple Notification Service (SNS)
+
+Add the following resources with appropriate properties and rules to the cloudformation template to get Amazon DynamoDB and Amazon SNS setup.
+
+- `AWS::DynamoDB::Table`
+  - `ReadCapacity: 1`
+  - `WriteCapacity: 1`
+  - `TimeToLive`: 5 minutes
+- `AWS::Lambda::Function`
+- `AWS::Lambda::Permission`
+- `AWS::IAM::Role` for Lambda Function
+  - `ManagedPolicyArns`:
+    - `arn:aws:iam::aws:policy/AmazonSESFullAccess`
+    - `arn:aws:iam::aws:policy/CloudWatchLogsFullAccess`
+    - `arn:aws:iam::aws:policy/AmazonS3FullAccess`
+    - `arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole`
+    - `arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess`
+- `AWS::SNS::Topic`
+- `AWS::SNS::TopicPolicy`
+
+Once the user hits the `/v1/account/` endpoint to create an account, DynamoDB stores a unique token for that username, and the SNS topic will trigger the AWS Lambda function that will send out the mail to the user (via AWS SES) asking them to verify their account by clicking on a `verifyUserEmail` route in the REST API.
+
+#### AWS CodeDeploy
+
+This is still a WIP.
+
 ## :rocket: Using the stack
 
 ### Validate template

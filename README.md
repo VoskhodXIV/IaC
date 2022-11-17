@@ -291,6 +291,16 @@ To create the stack, run the following command:
 aws cloudformation create-stack --stack-name <stack-name> --template-body file://<path-to-template-file>.yaml
 ```
 
+To create a stack with custom parameters:
+
+```shell
+aws cloudformation create-stack --stack-name app-stack \
+--template-body file://templates/csye6225-infra.yaml \
+--parameters ParameterKey=Environment,ParameterValue=prod \
+ParameterKey=AMI,ParameterValue=<ami-id> \
+--capabilities CAPABILITY_NAMED_IAM
+```
+
 ### Update
 
 To update the stack, run the following command:

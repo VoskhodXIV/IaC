@@ -295,7 +295,7 @@ Add the following resources with appropriate properties and rules to the cloudfo
 - `AWS::KMS::Key`
 - `AWS::KMS::Alias`
 
-## :: SSL Certificate
+## :closed_lock_with_key: SSL Certificate
 
 To get a SSL Certificate for your domain, visit [ZeroSSL](https://app.zerossl.com/dashboard). Follow the instructions to setup SSL for Amazon Web Services.
 

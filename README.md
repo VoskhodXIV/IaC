@@ -249,7 +249,7 @@ Once you have production access, you can send out more than 50,000 mails per day
 
 #### Amazon DynamoDB and Simple Notification Service (SNS)
 
-Add the following resources with appropriate properties and rules to the cloudformation template to get Amazon DynamoDB and Amazon SNS setup.
+Add the following resources with appropriate properties and rules to the cloudformation template to get Amazon DynamoDB and Amazon SNS setup:
 
 - `AWS::DynamoDB::Table`
   - `ReadCapacity: 1`
@@ -269,9 +269,43 @@ Add the following resources with appropriate properties and rules to the cloudfo
 
 Once the user hits the `/v1/account/` endpoint to create an account, DynamoDB stores a unique token for that username, and the SNS topic will trigger the AWS Lambda function that will send out the mail to the user (via AWS SES) asking them to verify their account by clicking on a `verifyUserEmail` route in the REST API.
 
-#### AWS CodeDeploy
+#### AutoScaling and LoadBalancing
 
-This is still a WIP.
+Once we have changes to be updated in our `webapp`, we will refresh/replace the instance currently running in the auto-scaling group of the previous AMI. When the new AMI is ready, we will refresh the current instance(s) with new ones that are created using the latest AMI. This workflow is to be executed using CI/CD pipelines in GitHub actions.
+
+For reference, we'll be using the [`start-instance-refresh`](https://docs.aws.amazon.com/cli/latest/reference/autoscaling/start-instance-refresh.html) command.
+
+Add the following resources with appropriate properties and rules to the cloudformation template to get AutoScaling and LoadBalancing setup:
+
+- `AWS::EC2::LaunchTemplate`
+- `AWS::AutoScaling::AutoScalingGroup`
+- `AWS::AutoScaling::ScalingPolicy`
+- `AWS::CloudWatch::Alarm`
+- `AWS::EC2::SecurityGroup` for LoadBalancer
+- `AWS::ElasticLoadBalancingV2::TargetGroup`
+- `AWS::ElasticLoadBalancingV2::LoadBalancer`
+- `AWS::ElasticLoadBalancingV2::Listener`
+
+#### EBS and RDS Security
+
+To secure our EBS volume and RDS instance, we will use Amazon KMS (Key Management System) to use encrypted keys.
+
+Add the following resources with appropriate properties and rules to the cloudformation template to get the EBS and RDS setup:
+
+- `AWS::KMS::Key`
+- `AWS::KMS::Alias`
+
+## :: SSL Certificate
+
+To get a SSL Certificate for your domain, visit [ZeroSSL](https://app.zerossl.com/dashboard). Follow the instructions to setup SSL for Amazon Web Services.
+
+You may need to add the `CNAME` record to `Amazon Route 53` to get the SSL working.
+
+To import the SSL certificate and private keys that you download from `ZeroSSL`, use the following command:
+
+```shell
+aws acm import-certificate --certificate fileb://certificate.crt --certificate-chain fileb://ca_bundle.crt --private-key fileb://private.key
+```
 
 ## :rocket: Using the stack
 
@@ -298,6 +332,7 @@ aws cloudformation create-stack --stack-name app-stack \
 --template-body file://templates/csye6225-infra.yaml \
 --parameters ParameterKey=Environment,ParameterValue=prod \
 ParameterKey=AMI,ParameterValue=<ami-id> \
+ParameterKey=SSLCertificateId, ParameterValue=<your-certificate-id> \
 --capabilities CAPABILITY_NAMED_IAM
 ```
 

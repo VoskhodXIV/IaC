@@ -877,7 +877,7 @@ Resources:
       VpcId: !Ref VPC
       HealthCheckEnabled: true
       HealthCheckIntervalSeconds: 90
-      HealthCheckPath: '/healthz'
+      HealthCheckPath: '/health'
       HealthCheckPort: '1337'
       HealthCheckProtocol: 'HTTP'
       HealthCheckTimeoutSeconds: 60

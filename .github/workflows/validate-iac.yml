@@ -1,0 +1,30 @@
+name: AWS Cloudformation IaC template validation
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Validate AWS Cloudformation template for custom AWS Stack
+    steps:
+      - name: Checkout code from branch
+        uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_DEV_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_DEV_SECRET_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Validate IaC cloudformation template
+        run: |
+          aws cloudformation validate-template --template-body file://templates/csye6225-infra.yaml
+          VALIDATE=$?
+          if [ $VALIDATE -eq 0 ]; then
+            echo "IaC template is valid!"
+          else
+            echo "Iac template is invalid!"
+          fi

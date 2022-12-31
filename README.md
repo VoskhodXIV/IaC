@@ -1,5 +1,7 @@
 # :building_construction: Infrastructure as Code
 
+[![AWS Cloudformation IaC](https://github.com/VoskhodXIV/IaC/actions/workflows/validate-iac.yml/badge.svg)](https://github.com/VoskhodXIV/IaC/actions/workflows/validate-iac.yml)
+
 Setup AWS infrastructure with `CloudFormation` templates.
 
 This repository helps you set up networking resources such as `VPC (Virtual Private Cloud)`, `Internet Gateway`, `Route Tables` and `Routes`.

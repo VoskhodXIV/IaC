@@ -145,6 +145,8 @@ parameters:
     Description: "The custom AMI built using Packer"
 ```
 
+> NOTE: For more details on how we'll be using HCP Packer, refer [here](https://github.com/VoskhodXIV/webservice#package-packer).
+
 ### :hammer: Configuration
 
 To launch the EC2 AMI at CloudFormation stack creation, we need to have a few configurations in place.
@@ -331,12 +333,44 @@ To create a stack with custom parameters:
 
 ```shell
 aws cloudformation create-stack --stack-name app-stack \
---template-body file://templates/csye6225-infra.yaml \
+--template-body file://templates/<your-template>.yaml \
 --parameters ParameterKey=Environment,ParameterValue=prod \
 ParameterKey=AMI,ParameterValue=<ami-id> \
 ParameterKey=SSLCertificateId, ParameterValue=<your-certificate-id> \
 --capabilities CAPABILITY_NAMED_IAM
 ```
+
+If you want to use a separate file that stores these parameters, you'll need to specify the path to this parameter file when creating (or updating) the stack.
+
+This parameter file should have the extension `.json` or `.yaml`. However, support for YAML parameter files in AWS CLI is not yet implemented. Please refer [this issue](https://github.com/aws/aws-cli/issues/2275) for more details. Native support for JSON parameters file is present and easy to use:
+
+```shell
+aws cloudformation create-stack --stack-name <your-stack-name> \
+--template-body file://templates/<your-template>.yaml \
+--parameters file://./<params-file>.json \
+--capabilities CAPABILITY_NAMED_IAM
+```
+
+However, for best practices, it's better to not have mixed markups for AWS Cloudformation configurations. Since our base template is in YAML, we'll use the parameter file written in YAML. The only hack here is we need to install a separate package called [yq](https://github.com/mikefarah/yq), which will help us parse our `.yaml` file as a valid parameter file to the AWS CLI Cloudformation command.
+
+To install `yq`:
+
+```shell
+# mac install only
+# Refer https://github.com/mikefarah/yq for installation options on other OS platforms
+brew install yq
+```
+
+To use the `.yaml` parameter file:
+
+```shell
+aws cloudformation create-stack --stack-name <your-stack-name> \
+--template-body file://templates/<your-template>.yaml \
+--parameters $(yq eval -o=j ./<params-file>.yaml) \
+--capabilities CAPABILITY_NAMED_IAM
+```
+
+Refer [this issue](https://github.com/aws/aws-cli/issues/2275) for more details on how to use YAML for AWS CLI Cloudformation parameters option.
 
 ### Update
 
@@ -381,6 +415,26 @@ aws ec2 describe-vpcs --output table
 ```shell
 aws ec2 describe-availability-zones [--region <region-name>] --output table
 ```
+
+## :pager: Using the EC2 instance
+
+To use the instance we build using the custom AMI and Cloudformation stack, use the following command:
+
+```shell
+ssh <username>@<ip-address> -v -i ~/.ssh/<key-name>
+```
+
+Ex: `ssh ubuntu@10.0.0.0 -v -i ~/.ssh/ec2-user`
+
+### :card_index: Postgres Access
+
+To access your database on the EC2 instance, use the following command:
+
+```shell
+psql --host=<your-rds.amazonaws.com-host> --port=5432 --username=<your-username> --password --dbname=<your-db-name>
+```
+
+> Running the above command will prompt your to enter the password to your database.
 
 ## :ninja: Author
 

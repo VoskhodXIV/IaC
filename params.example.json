@@ -1,0 +1,42 @@
+[
+  {
+    "ParameterKey": "Environment",
+    "ParameterValue": "env-type"
+  },
+  {
+    "ParameterKey": "VpcCidrBlock",
+    "ParameterValue": "CIDR-IP-addr"
+  },
+  {
+    "ParameterKey": "EC2InstanceType",
+    "ParameterValue": "ec2-instance-type"
+  },
+  {
+    "ParameterKey": "AMI",
+    "ParameterValue": "ami-id"
+  },
+  {
+    "ParameterKey": "DBInstanceIdentifierName",
+    "ParameterValue": "db-instance-name"
+  },
+  {
+    "ParameterKey": "DBName",
+    "ParameterValue": "dbname"
+  },
+  {
+    "ParameterKey": "DBUser",
+    "ParameterValue": "dbuser"
+  },
+  {
+    "ParameterKey": "DBPassword",
+    "ParameterValue": "password"
+  },
+  {
+    "ParameterKey": "HostedZoneName",
+    "ParameterValue": "HZ-name"
+  },
+  {
+    "ParameterKey": "SSLCertificateId",
+    "ParameterValue": "SSL-certificate-id"
+  }
+]

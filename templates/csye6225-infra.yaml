@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 
-Description: Template to setup networking resources such as Virtual Private Cloud(VPC), Internet Gateway, Route Tables, and Routes in a stack
+Description: Easy setup and teardown of cloud infra using Cloudformation stack for Infrastructure as Code [IaC]
 
 # Parameters
 Parameters:
@@ -18,7 +18,7 @@ Parameters:
   EC2InstanceType:
     Type: String
     Default: t2.micro
-    AllowedValues: [t2.micro]
+    AllowedValues: [t2.micro, t3.micro]
     Description: 'EC2 AMI Instance Type'
   AMI:
     Type: String
@@ -608,8 +608,8 @@ Resources:
             echo DBUSER="${DBUser}" >> .env
             echo AWS_BUCKET_NAME="${S3Bucket}" >> .env
             echo AWS_REGION="${AWS::Region}" >> .env
-            echo DYNAMO_DB_TABLE_NAME=${DynamoDBTable} >> .env
-            echo SNS_TOPIC_ARN=${SNSservice} >> .env
+            echo DYNAMO_DB_TABLE_NAME=${UserTokenDynamoDBTable} >> .env
+            echo SNS_TOPIC_ARN=${SNSTopic} >> .env
             cat .env
 
             echo "Starting the REST API Service with new .env variables"
@@ -617,10 +617,10 @@ Resources:
             sudo systemctl status nodeserver.service
 
   # DynamoDB
-  DynamoDBTable:
+  UserTokenDynamoDBTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: csye-6225
+      TableName: !Sub '${AWS::StackName}-UserTokenTable'
       AttributeDefinitions:
         - AttributeName: 'Email'
           AttributeType: 'S'
@@ -641,17 +641,31 @@ Resources:
         - Key: key
           Value: value
 
+  TrackUserEmailDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'trackUserEmailDynamoDBTable'
+      AttributeDefinitions:
+        - AttributeName: 'Email'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'Email'
+          KeyType: 'HASH'
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
   # SNS Topic
-  SNSservice:
+  SNSTopic:
     Type: AWS::SNS::Topic
     Properties:
-      DisplayName: verify_email
+      TopicName: !Sub '${AWS::StackName}-SNSTopic-verify_email'
+      DisplayName: !Sub '${AWS::StackName}-SNSTopic-verify_email'
       Subscription:
         - Endpoint: !GetAtt LambdaFunction.Arn
           Protocol: lambda
-      TopicName: verify_email
   # SNS topic policy
-  SNStopicpolicy:
+  SNSTopicPolicy:
     Type: AWS::SNS::TopicPolicy
     Properties:
       PolicyDocument:
@@ -671,7 +685,7 @@ Resources:
               - SNS:AddPermission
               - SNS:Subscribe
             Resource:
-              Ref: SNSservice
+              Ref: SNSTopic
             Condition:
               StringEquals:
                 AWS:SourceOwner: !Ref AWS::AccountId
@@ -681,7 +695,7 @@ Resources:
               AWS: '*'
             Action: SNS:Publish
             Resource:
-              Ref: SNSservice
+              Ref: SNSTopic
           - Sid: __console_sub_0
             Effect: Allow
             Principal:
@@ -690,33 +704,38 @@ Resources:
               - SNS:Subscribe
               - SNS:Receive
             Resource:
-              Ref: SNSservice
+              Ref: SNSTopic
       Topics:
-        - Ref: SNSservice
+        - Ref: SNSTopic
   # Lambda Permissions
-  LambdaInvokePermission:
+  SNSTopicLambdaInvokePermission:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Ref LambdaFunction
       Action: lambda:InvokeFunction
       Principal: sns.amazonaws.com
       SourceArn:
-        Ref: SNSservice
+        Ref: SNSTopic
 
   # Lambda Function
   LambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: emailVerify
-      Role:
-        Fn::Join:
-          - ''
-          - - 'arn:aws:iam::'
-            - !Ref AWS::AccountId
-            - ':role/'
-            - !Ref LambdaRole
+      Description: !Sub 'verify user email'
+      Role: !GetAtt LambdaRole.Arn
       Runtime: nodejs16.x
       Handler: index.handler
+      Timeout: 300
+      MemorySize: 128
+      Architectures:
+        - x86_64
+      PackageType: Zip
+      Environment:
+        Variables:
+          TrackUserEmailDynamoDBTable: !Ref TrackUserEmailDynamoDBTable
+          TrackUserEmailDynamoDBRegion: !Ref AWS::Region
+          DomainEnvironment: !Ref Environment
       Code:
         ZipFile: |
           console.log('In Lambda function');
